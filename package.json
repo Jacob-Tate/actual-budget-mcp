@@ -6,6 +6,7 @@
   "main": "dist/index.js",
   "scripts": {
     "typecheck": "node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit",
+    "build:check": "npm run build && echo 'Build OK'",
     "build": "esbuild src/index.ts --bundle --platform=node --target=node22 --format=cjs --outfile=dist/index.js --packages=external --sourcemap",
     "start": "node dist/index.js",
     "dev": "node --max-old-space-size=4096 node_modules/ts-node/dist/bin.js --transpile-only src/index.ts"

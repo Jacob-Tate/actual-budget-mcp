@@ -6,6 +6,7 @@ import { registerPayeeTools } from './tools/payees';
 import { registerRuleTools } from './tools/rules';
 import { registerBudgetTools } from './tools/budget';
 import { registerAnalyticsTools } from './tools/analytics';
+import { registerScheduleTools } from './tools/schedules';
 
 export function createMcpServer(): McpServer {
   const server = new McpServer({
@@ -20,6 +21,7 @@ export function createMcpServer(): McpServer {
   registerRuleTools(server);
   registerBudgetTools(server);
   registerAnalyticsTools(server);
+  registerScheduleTools(server);
 
   return server;
 }
