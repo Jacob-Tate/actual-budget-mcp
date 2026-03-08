@@ -71,7 +71,9 @@ function renderLoginForm(params: {
     <input type="hidden" name="client_id" value="${escapeHtml(clientId)}">
     <input type="hidden" name="redirect_uri" value="${escapeHtml(redirectUri)}">
     <input type="hidden" name="state" value="${escapeHtml(state ?? '')}">
+    <input type="hidden" name="response_type" value="code">
     <input type="hidden" name="code_challenge" value="${escapeHtml(codeChallenge)}">
+    <input type="hidden" name="code_challenge_method" value="S256">
     <label for="password">MCP Server Password</label>
     <input type="password" id="password" name="password" required autofocus placeholder="Enter your MCP password">
     <button type="submit">Authorize</button>
