@@ -12,16 +12,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy manifests first for layer caching
+# Copy manifests
 COPY package.json package-lock.json ./
 
-# Full install including native compilation
-RUN npm ci
+# Use `npm install` (not `npm ci`) so npm resolves the correct platform-specific
+# esbuild binary for this arch. The lock file may have been generated on macOS
+# and would otherwise miss @esbuild/linux-x64 / @esbuild/linux-arm64.
+RUN npm install
 
 # Copy source and build
 COPY tsconfig.json ./
 COPY src/ ./src/
 
+# esbuild is resolved from ./node_modules/.bin via npm script PATH
 RUN npm run build
 
 # ── Runtime stage ─────────────────────────────────────────────────────────────
@@ -29,15 +32,12 @@ FROM node:22-slim AS runtime
 
 WORKDIR /app
 
-# Install runtime libs needed by better-sqlite3
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libstdc++6 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy manifests and install production deps only (re-compiles native addons)
+# Copy manifests and install production deps only.
+# better-sqlite3 is a regular dependency so npm ci handles it correctly;
+# build tools are needed only during native recompilation then removed.
 COPY package.json package-lock.json ./
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 make g++ \
+        python3 make g++ \
     && npm ci --omit=dev \
     && apt-get purge -y python3 make g++ \
     && apt-get autoremove -y \
@@ -50,8 +50,8 @@ COPY --from=builder /app/dist ./dist
 RUN mkdir -p /app/data
 
 # Drop root
-RUN useradd --system --uid 1001 --gid root mcp
-RUN chown -R mcp:root /app/data
+RUN useradd --system --uid 1001 --gid root mcp \
+    && chown -R mcp:root /app/data
 USER mcp
 
 VOLUME ["/app/data"]
