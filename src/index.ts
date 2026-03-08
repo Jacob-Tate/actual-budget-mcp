@@ -12,6 +12,9 @@ async function main(): Promise<void> {
 
   const app = express();
 
+  // Trust the first proxy hop (nginx/caddy in front of this container)
+  app.set('trust proxy', 1);
+
   // Parse JSON bodies (needed for MCP POST requests)
   app.use(express.json());
 
