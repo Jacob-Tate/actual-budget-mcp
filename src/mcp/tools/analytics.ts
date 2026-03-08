@@ -149,6 +149,60 @@ export function registerAnalyticsTools(server: McpServer): void {
     } catch (e) { return fail(e); }
   });
 
+  server.registerTool('budget-vs-actual', {
+    description: 'Compare budgeted amounts to actual spending per category for one or more months. Returns each category with its budgeted amount, actual spent, variance (budgeted - spent), and percentage used. Amounts in milliunits (100 = $1.00). Expense spent values are negative.',
+    inputSchema: {
+      startMonth: z.string().describe('Start month in YYYY-MM format'),
+      endMonth: z.string().optional().describe('End month in YYYY-MM format (inclusive). Defaults to startMonth.'),
+      includeIncome: z.boolean().optional().describe('Include income category groups. Default: false.'),
+    },
+  }, async ({ startMonth, endMonth, includeIncome = false }) => {
+    try {
+      actualClient.ensureReady();
+      const months = monthRange(startMonth, endMonth ?? startMonth);
+      const budgetData = await Promise.all(
+        months.map(m => actualClient.api.getBudgetMonth(m) as Promise<BudgetMonthData>)
+      );
+
+      const result = budgetData.map(data => {
+        const categories: {
+          groupId: string;
+          groupName: string;
+          categoryId: string;
+          categoryName: string;
+          budgeted: number;
+          actual: number;
+          variance: number;
+          percentUsed: number | null;
+        }[] = [];
+
+        for (const group of data.categoryGroups) {
+          if (!includeIncome && group.is_income) continue;
+          for (const cat of group.categories) {
+            const actual = cat.spent;
+            const budgeted = cat.budgeted;
+            const variance = budgeted + actual; // actual is negative for expenses
+            const percentUsed = budgeted !== 0 ? Math.round((-actual / budgeted) * 10000) / 100 : null;
+            categories.push({
+              groupId: group.id,
+              groupName: group.name,
+              categoryId: cat.id,
+              categoryName: cat.name,
+              budgeted,
+              actual,
+              variance,
+              percentUsed,
+            });
+          }
+        }
+
+        return { month: data.month, categories };
+      });
+
+      return ok(result);
+    } catch (e) { return fail(e); }
+  });
+
   server.registerTool('balance-history', {
     description: 'Account balance over time, computed from transaction history. Returns balance snapshots at each interval point. Amounts in milliunits (100 = $1.00).',
     inputSchema: {
