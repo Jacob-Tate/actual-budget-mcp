@@ -1,0 +1,31 @@
+{
+  "name": "actual-budget-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Actual Budget personal finance app with Claude.ai OAuth support",
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "scripts": {
+    "typecheck": "node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit",
+    "build": "node node_modules/esbuild/bin/esbuild src/index.ts --bundle --platform=node --target=node22 --format=cjs --outfile=dist/index.js --packages=external --sourcemap",
+    "start": "node dist/index.js",
+    "dev": "node --max-old-space-size=4096 node_modules/ts-node/dist/bin.js --transpile-only src/index.ts"
+  },
+  "dependencies": {
+    "@actual-app/api": "^24.10.1",
+    "@modelcontextprotocol/sdk": "^1.9.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "jsonwebtoken": "^9.0.2",
+    "uuid": "^10.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.6",
+    "@types/node": "^22.0.0",
+    "@types/uuid": "^10.0.0",
+    "esbuild": "^0.24.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.0"
+  }
+}

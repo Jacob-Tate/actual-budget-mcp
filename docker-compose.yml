@@ -1,0 +1,35 @@
+services:
+  actual-budget-mcp:
+    image: ghcr.io/jacob-tate/actual-budget-mcp:latest
+    # To build locally instead: comment out `image` and uncomment `build`
+    # build: .
+    container_name: actual-budget-mcp
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - actual-data:/app/data
+    environment:
+      # Actual Budget server connection
+      ACTUAL_SERVER_URL: ${ACTUAL_SERVER_URL}
+      ACTUAL_SERVER_PASSWORD: ${ACTUAL_SERVER_PASSWORD}
+      ACTUAL_SYNC_ID: ${ACTUAL_SYNC_ID}
+      # MCP OAuth
+      MCP_AUTH_PASSWORD: ${MCP_AUTH_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      BASE_URL: ${BASE_URL}
+      # Optional
+      PORT: ${PORT:-3000}
+    healthcheck:
+      test: >
+        node -e "require('http').get('http://localhost:' + (process.env.PORT||3000) +
+        '/.well-known/oauth-authorization-server',
+        r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+volumes:
+  actual-data:
+    driver: local
