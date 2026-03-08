@@ -50,6 +50,8 @@ export interface ActualAPI {
   updateRule(id: string, fields: Partial<Rule>): Promise<Rule>;
   deleteRule(id: string): Promise<void>;
 
+  runQuery(query: unknown): Promise<{ data: unknown[] }>;
+
   getBudgetMonths(): Promise<string[]>;
   getBudgetMonth(month: string): Promise<BudgetMonth>;
   setBudgetAmount(month: string, categoryId: string, value: number): Promise<void>;

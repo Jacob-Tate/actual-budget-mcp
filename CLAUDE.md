@@ -44,6 +44,9 @@ npm run build           # compile to dist/
 npm start               # run compiled output
 ```
 
+> **IMPORTANT**: NEVER run `npm run typecheck` — it takes hours due to `@actual-app/api`'s heavy types.
+> Use `npm run build` (esbuild, ~14ms) to verify the code compiles.
+
 ## Amount Convention
 
 Actual Budget uses **integer milliunits**: `100` = $1.00, `1099` = $10.99. All tool inputs/outputs follow this convention.
