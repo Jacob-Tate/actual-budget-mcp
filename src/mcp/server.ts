@@ -8,6 +8,7 @@ import { registerBudgetTools } from './tools/budget';
 import { registerAnalyticsTools } from './tools/analytics';
 import { registerScheduleTools } from './tools/schedules';
 import { registerQueryTools } from './tools/query';
+import { registerTagTools } from './tools/tags';
 
 export function createMcpServer(): McpServer {
   const server = new McpServer({
@@ -24,6 +25,7 @@ export function createMcpServer(): McpServer {
   registerAnalyticsTools(server);
   registerScheduleTools(server);
   registerQueryTools(server);
+  registerTagTools(server);
 
   return server;
 }
