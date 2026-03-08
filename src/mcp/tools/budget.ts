@@ -104,6 +104,27 @@ export function registerBudgetTools(server: McpServer): void {
     } catch (e) { return fail(e); }
   });
 
+  server.registerTool('batch-set-budget-amounts', {
+    description: 'Set budgeted amounts for multiple categories in a single atomic operation. Amounts are in milliunits (100 = $1.00).',
+    inputSchema: {
+      month: z.string().describe('Month in YYYY-MM format (e.g. "2024-03")'),
+      updates: z.array(z.object({
+        categoryId: z.string().describe('Category ID'),
+        amount: z.number().int().describe('Budgeted amount in milliunits (100 = $1.00)'),
+      })).describe('List of category budget updates to apply'),
+    },
+  }, async ({ month, updates }) => {
+    try {
+      actualClient.ensureReady();
+      await actualClient.api.batchBudgetUpdates(async () => {
+        for (const { categoryId, amount } of updates) {
+          await actualClient.api.setBudgetAmount(month, categoryId, amount);
+        }
+      });
+      return ok({ success: true, updated: updates.length });
+    } catch (e) { return fail(e); }
+  });
+
   server.registerTool('sync', {
     description: 'Sync the local budget cache with the Actual Budget server to pull in any changes made elsewhere.',
   }, async () => {
