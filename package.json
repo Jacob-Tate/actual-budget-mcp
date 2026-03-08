@@ -11,7 +11,7 @@
     "dev": "node --max-old-space-size=4096 node_modules/ts-node/dist/bin.js --transpile-only src/index.ts"
   },
   "dependencies": {
-    "@actual-app/api": "^24.10.1",
+    "@actual-app/api": "^26.3.0",
     "@modelcontextprotocol/sdk": "^1.9.0",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",

@@ -5,3 +5,4 @@ dist/
 data/
 *.js.map
 *.tsbuildinfo
+docker-compose.prod.yml
