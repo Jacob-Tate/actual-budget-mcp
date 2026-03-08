@@ -64,17 +64,31 @@ export interface Account {
   closed: boolean;
 }
 
+export interface Subtransaction {
+  amount: number;
+  category?: string;
+  notes?: string;
+  payee?: string;
+}
+
 export interface Transaction {
   id: string;
   date: string;
   amount: number;
-  payee_id: string;
-  payee_name: string;
-  category_id: string;
-  notes: string;
-  imported_id: string;
-  cleared: boolean;
-  transfer_id: string;
+  /** Payee ID. Use payee_name to create/match by name instead. */
+  payee?: string;
+  payee_name?: string;
+  /** Category ID. Omit for split transactions (use subtransactions). */
+  category?: string;
+  notes?: string;
+  imported_id?: string;
+  imported_payee?: string;
+  cleared?: boolean;
+  transfer_id?: string;
+  is_parent?: boolean;
+  is_child?: boolean;
+  parent_id?: string;
+  subtransactions?: Subtransaction[];
 }
 
 export interface Category {
