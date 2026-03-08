@@ -77,6 +77,33 @@ export function registerBudgetTools(server: McpServer): void {
     } catch (e) { return fail(e); }
   });
 
+  server.registerTool('hold-budget-for-next-month', {
+    description: 'Hold a portion of this month\'s available funds for use next month. Amount is in milliunits (100 = $1.00).',
+    inputSchema: {
+      month: z.string().describe('Month in YYYY-MM format'),
+      amount: z.number().int().describe('Amount to hold in milliunits (100 = $1.00)'),
+    },
+  }, async ({ month, amount }) => {
+    try {
+      actualClient.ensureReady();
+      await actualClient.api.holdBudgetForNextMonth(month, amount);
+      return ok({ success: true });
+    } catch (e) { return fail(e); }
+  });
+
+  server.registerTool('reset-budget-hold', {
+    description: 'Reset (clear) the budget hold for a given month, releasing held funds back to available.',
+    inputSchema: {
+      month: z.string().describe('Month in YYYY-MM format'),
+    },
+  }, async ({ month }) => {
+    try {
+      actualClient.ensureReady();
+      await actualClient.api.resetBudgetHold(month);
+      return ok({ success: true });
+    } catch (e) { return fail(e); }
+  });
+
   server.registerTool('sync', {
     description: 'Sync the local budget cache with the Actual Budget server to pull in any changes made elsewhere.',
   }, async () => {
