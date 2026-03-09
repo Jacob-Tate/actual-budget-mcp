@@ -4,7 +4,7 @@ An [MCP (Model Context Protocol)](https://modelcontextprotocol.io) server that g
 
 ## Features
 
-- **51 tools** covering accounts, transactions, categories, payees, automation rules, budgets, schedules, tags, analytics, and ad-hoc queries
+- **52 tools** covering accounts, transactions, categories, payees, automation rules, budgets, schedules, tags, analytics, ad-hoc queries, and name-to-ID lookup
 - **OAuth 2.0** authentication compatible with Claude.ai's MCP integration
 - **Single-user** design — your Actual Budget credentials are configured via environment variables, never stored in tokens
 - **Stateless HTTP** transport with `StreamableHTTPServerTransport`
@@ -23,6 +23,7 @@ An [MCP (Model Context Protocol)](https://modelcontextprotocol.io) server that g
 | Tags | `get-tags`, `create-tag`, `update-tag`, `delete-tag` |
 | Analytics | `monthly-summary`, `spending-by-category`, `budget-vs-actual`, `balance-history` |
 | Query | `run-query` |
+| Lookup | `get-id-by-name` |
 
 > **Amounts** are always in milliunits: `100` = $1.00, `-4599` = -$45.99
 
@@ -178,5 +179,6 @@ src/
         ├── schedules.ts
         ├── tags.ts
         ├── analytics.ts
-        └── query.ts
+        ├── query.ts
+        └── lookup.ts
 ```
