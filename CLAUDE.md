@@ -9,7 +9,8 @@ MCP server exposing Actual Budget's personal finance API to Claude.ai via OAuth 
 - **MCP SDK**: `@modelcontextprotocol/sdk`
 - **Budget API**: `@actual-app/api`
 - **HTTP**: Express 4
-- **Auth**: JWT via `jsonwebtoken`, OAuth 2.0 via MCP SDK's `authRouter`
+- **Auth**: JWT via `jsonwebtoken`, OAuth 2.0 via MCP SDK's `mcpAuthRouter`
+- **Token store**: SQLite via `better-sqlite3` (persists across restarts)
 
 ## Project Structure
 
@@ -18,7 +19,8 @@ src/
 ├── config.ts           # Env var validation (fail-fast on startup)
 ├── index.ts            # Express app + startup/shutdown lifecycle
 ├── auth/
-│   ├── store.ts        # In-memory OAuth state (codes, tokens, clients)
+│   ├── db.ts           # better-sqlite3 singleton + schema init
+│   ├── store.ts        # SQLite-backed OAuth state (codes, tokens, clients)
 │   ├── oauth.ts        # OAuthServerProvider + HTML login form
 │   └── middleware.ts   # Bearer JWT validation middleware
 ├── actual/

@@ -16,9 +16,12 @@ import {
   consumeAuthCode,
   saveToken,
   isTokenRevoked,
+  saveRefreshToken,
+  consumeRefreshToken,
 } from './store';
 
-const TOKEN_TTL_SECONDS = 3600; // 1 hour
+const TOKEN_TTL_SECONDS = 60 * 60 * 24;      // 24 hours
+const REFRESH_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 90; // 90 days
 
 const clientsStore: OAuthRegisteredClientsStore = {
   getClient(clientId: string): OAuthClientInformationFull | undefined {
@@ -102,6 +105,13 @@ function mintAccessToken(clientId: string): { token: string; jti: string; expire
   return { token, jti, expiresAt };
 }
 
+function mintRefreshToken(clientId: string): string {
+  const token = randomUUID();
+  const expiresAt = Date.now() + REFRESH_TOKEN_TTL_SECONDS * 1000;
+  saveRefreshToken({ token, clientId, expiresAt, revoked: false });
+  return token;
+}
+
 export const oauthProvider: OAuthServerProvider = {
   clientsStore,
 
@@ -177,15 +187,31 @@ export const oauthProvider: OAuthServerProvider = {
     }
 
     const { token } = mintAccessToken(client.client_id);
+    const refreshToken = mintRefreshToken(client.client_id);
     return {
       access_token: token,
       token_type: 'bearer',
       expires_in: TOKEN_TTL_SECONDS,
+      refresh_token: refreshToken,
     };
   },
 
-  async exchangeRefreshToken(): Promise<OAuthTokens> {
-    throw new Error('Refresh tokens are not supported');
+  async exchangeRefreshToken(
+    _client: OAuthClientInformationFull,
+    refreshToken: string,
+  ): Promise<OAuthTokens> {
+    const record = consumeRefreshToken(refreshToken);
+    if (!record) {
+      throw new Error('Refresh token is invalid or expired');
+    }
+    const { token } = mintAccessToken(record.clientId);
+    const newRefreshToken = mintRefreshToken(record.clientId);
+    return {
+      access_token: token,
+      token_type: 'bearer',
+      expires_in: TOKEN_TTL_SECONDS,
+      refresh_token: newRefreshToken,
+    };
   },
 
   async verifyAccessToken(token: string): Promise<AuthInfo> {

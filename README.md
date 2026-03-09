@@ -59,6 +59,7 @@ Or with Docker Compose — see [docker-compose.yml](docker-compose.yml).
 | `BASE_URL` | ✅ | Public HTTPS URL of this MCP server |
 | `PORT` | — | HTTP port (default: `3000`) |
 | `ACTUAL_DATA_DIR` | — | Local cache dir (default: `./data`) |
+| `AUTH_DB_PATH` | — | SQLite DB for OAuth tokens (default: `{ACTUAL_DATA_DIR}/auth.db`) |
 
 ### Finding your Sync ID
 
@@ -82,7 +83,7 @@ npm start
 npm run dev
 ```
 
-**Type checking:**
+**Type checking** (slow — avoid; use `npm run build` instead):
 ```bash
 npm run typecheck
 ```
@@ -92,7 +93,8 @@ npm run typecheck
 - Expose port 3000 behind a reverse proxy (nginx, Caddy) with HTTPS
 - `BASE_URL` must be the public HTTPS URL — Claude.ai requires HTTPS for OAuth
 - The `/data` volume stores Actual Budget's local cache — mount it for persistence
-- Tokens expire after 1 hour; clients re-authorize automatically
+- OAuth tokens are persisted in SQLite (`./data/auth.db`) — survive restarts
+- Access tokens expire after 24 hours; refresh tokens last 90 days and rotate silently
 
 ## Project Structure
 
@@ -101,7 +103,8 @@ src/
 ├── config.ts              # Env var validation
 ├── index.ts               # Express app + startup
 ├── auth/
-│   ├── store.ts           # In-memory OAuth state
+│   ├── db.ts              # SQLite singleton + schema init
+│   ├── store.ts           # SQLite-backed OAuth state (tokens, clients)
 │   ├── oauth.ts           # OAuthServerProvider + login form
 │   └── middleware.ts      # Bearer token validation
 ├── actual/

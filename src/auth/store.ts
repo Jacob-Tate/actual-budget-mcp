@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import type { OAuthClientInformationFull } from '@modelcontextprotocol/sdk/shared/auth.js';
+import { getAuthDb } from './db';
 
 export type { OAuthClientInformationFull };
 
@@ -19,16 +20,28 @@ export interface TokenRecord {
   revoked: boolean;
 }
 
-const clients = new Map<string, OAuthClientInformationFull>();
-const authCodes = new Map<string, AuthCode>();
-const tokens = new Map<string, TokenRecord>();
+export interface RefreshTokenRecord {
+  token: string;
+  clientId: string;
+  expiresAt: number;
+  revoked: boolean;
+}
+
+// ── Clients ──────────────────────────────────────────────────────────────────
 
 export function saveClient(client: OAuthClientInformationFull): void {
-  clients.set(client.client_id, client);
+  const db = getAuthDb();
+  db.prepare(`
+    INSERT INTO clients (client_id, data) VALUES (?, ?)
+    ON CONFLICT(client_id) DO UPDATE SET data = excluded.data
+  `).run(client.client_id, JSON.stringify(client));
 }
 
 export function getClient(clientId: string): OAuthClientInformationFull | undefined {
-  return clients.get(clientId);
+  const row = getAuthDb()
+    .prepare('SELECT data FROM clients WHERE client_id = ?')
+    .get(clientId) as { data: string } | undefined;
+  return row ? (JSON.parse(row.data) as OAuthClientInformationFull) : undefined;
 }
 
 export function registerClient(
@@ -39,9 +52,11 @@ export function registerClient(
     client_id: randomUUID(),
     client_id_issued_at: Math.floor(Date.now() / 1000),
   };
-  clients.set(client.client_id, client);
+  saveClient(client);
   return client;
 }
+
+// ── Auth Codes ────────────────────────────────────────────────────────────────
 
 export function createAuthCode(params: {
   clientId: string;
@@ -54,53 +69,95 @@ export function createAuthCode(params: {
     expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
     ...params,
   };
-  authCodes.set(code.code, code);
+  getAuthDb().prepare(`
+    INSERT INTO auth_codes (code, client_id, redirect_uri, code_challenge, expires_at, used)
+    VALUES (?, ?, ?, ?, ?, 0)
+  `).run(code.code, code.clientId, code.redirectUri, code.codeChallenge, code.expiresAt);
   return code;
 }
 
-/**
- * Returns the stored code challenge for a given auth code (without consuming it).
- * Used by the SDK to perform PKCE verification before calling exchangeAuthorizationCode.
- */
 export function getChallengeForCode(code: string): string | undefined {
-  return authCodes.get(code)?.codeChallenge;
+  const now = Date.now();
+  const row = getAuthDb().prepare(`
+    SELECT code_challenge FROM auth_codes
+    WHERE code = ? AND used = 0 AND expires_at > ?
+  `).get(code, now) as { code_challenge: string } | undefined;
+  return row?.code_challenge;
 }
 
-/**
- * Atomically consume an auth code. Marks used immediately to prevent replay.
- * Returns undefined if not found, expired, or already used.
- */
 export function consumeAuthCode(code: string): AuthCode | undefined {
-  const record = authCodes.get(code);
-  if (!record) return undefined;
-  if (record.used) return undefined;
-  if (Date.now() > record.expiresAt) {
-    authCodes.delete(code);
-    return undefined;
-  }
-  record.used = true;
-  authCodes.delete(code);
-  return record;
+  const db = getAuthDb();
+  const now = Date.now();
+
+  const row = db.prepare(`
+    SELECT * FROM auth_codes WHERE code = ? AND used = 0 AND expires_at > ?
+  `).get(code, now) as {
+    code: string; client_id: string; redirect_uri: string;
+    code_challenge: string; expires_at: number; used: number;
+  } | undefined;
+
+  if (!row) return undefined;
+
+  db.prepare('UPDATE auth_codes SET used = 1 WHERE code = ?').run(code);
+
+  return {
+    code: row.code,
+    clientId: row.client_id,
+    redirectUri: row.redirect_uri,
+    codeChallenge: row.code_challenge,
+    expiresAt: row.expires_at,
+    used: false,
+  };
 }
+
+// ── Access Tokens ─────────────────────────────────────────────────────────────
 
 export function saveToken(record: TokenRecord): void {
-  tokens.set(record.jti, record);
+  getAuthDb().prepare(`
+    INSERT INTO tokens (jti, client_id, expires_at, revoked) VALUES (?, ?, ?, 0)
+  `).run(record.jti, record.clientId, record.expiresAt);
 }
 
 export function revokeToken(jti: string): void {
-  const record = tokens.get(jti);
-  if (record) {
-    record.revoked = true;
-  }
+  getAuthDb().prepare('UPDATE tokens SET revoked = 1 WHERE jti = ?').run(jti);
 }
 
 export function isTokenRevoked(jti: string): boolean {
-  const record = tokens.get(jti);
-  if (!record) return true;
-  if (record.revoked) return true;
-  if (Date.now() > record.expiresAt) {
-    tokens.delete(jti);
-    return true;
-  }
-  return false;
+  const now = Date.now();
+  const row = getAuthDb().prepare(`
+    SELECT revoked FROM tokens WHERE jti = ? AND expires_at > ?
+  `).get(jti, now) as { revoked: number } | undefined;
+  if (!row) return true;
+  return row.revoked === 1;
+}
+
+// ── Refresh Tokens ────────────────────────────────────────────────────────────
+
+export function saveRefreshToken(record: RefreshTokenRecord): void {
+  getAuthDb().prepare(`
+    INSERT INTO refresh_tokens (token, client_id, expires_at, revoked) VALUES (?, ?, ?, 0)
+  `).run(record.token, record.clientId, record.expiresAt);
+}
+
+export function consumeRefreshToken(token: string): RefreshTokenRecord | undefined {
+  const db = getAuthDb();
+  const now = Date.now();
+
+  const row = db.prepare(`
+    SELECT * FROM refresh_tokens WHERE token = ? AND revoked = 0 AND expires_at > ?
+  `).get(token, now) as {
+    token: string; client_id: string; expires_at: number; revoked: number;
+  } | undefined;
+
+  if (!row) return undefined;
+
+  // Rotate: delete consumed token so it can't be reused
+  db.prepare('DELETE FROM refresh_tokens WHERE token = ?').run(token);
+
+  return {
+    token: row.token,
+    clientId: row.client_id,
+    expiresAt: row.expires_at,
+    revoked: false,
+  };
 }

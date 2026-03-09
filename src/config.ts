@@ -8,6 +8,7 @@ export interface Config {
   actualServerPassword: string;
   actualSyncId: string;
   actualDataDir: string;
+  authDbPath: string;
   mcpAuthPassword: string;
   jwtSecret: string;
   port: number;
@@ -35,12 +36,14 @@ function loadConfig(): Config {
   }
 
   const dataDir = process.env['ACTUAL_DATA_DIR'] ?? './data';
+  const authDbPath = process.env['AUTH_DB_PATH'] ?? path.join(dataDir, 'auth.db');
 
   return {
     actualServerUrl: requireEnv('ACTUAL_SERVER_URL'),
     actualServerPassword: requireEnv('ACTUAL_SERVER_PASSWORD'),
     actualSyncId: requireEnv('ACTUAL_SYNC_ID'),
     actualDataDir: path.resolve(dataDir),
+    authDbPath: path.resolve(authDbPath),
     mcpAuthPassword: requireEnv('MCP_AUTH_PASSWORD'),
     jwtSecret,
     port,
