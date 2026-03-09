@@ -1,9 +1,11 @@
 import express from 'express';
 import { mcpAuthRouter } from '@modelcontextprotocol/sdk/server/auth/router.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import jwt from 'jsonwebtoken';
 import { config } from './config';
 import { oauthProvider } from './auth/oauth';
 import { bearerAuthMiddleware } from './auth/middleware';
+import { revokeToken, revokeRefreshToken } from './auth/store';
 import { createMcpServer } from './mcp/server';
 import { actualClient } from './actual/client';
 
@@ -28,11 +30,28 @@ async function main(): Promise<void> {
   //   GET  /authorize
   //   POST /authorize
   //   POST /token
+  //   POST /revoke  (RFC 7009, added below)
   app.use(mcpAuthRouter({
     provider: oauthProvider,
     issuerUrl: new URL(config.baseUrl),
     resourceName: 'Actual Budget MCP',
   }));
+
+  // RFC 7009 — Token Revocation (no auth required; always returns 200)
+  app.post('/revoke', (req, res) => {
+    const token = req.body?.token as string | undefined;
+    if (token) {
+      const payload = jwt.decode(token) as { jti?: string } | null;
+      if (payload?.jti) {
+        // Access token — revoke by JWT ID
+        revokeToken(payload.jti);
+      } else {
+        // Opaque refresh token (UUID)
+        revokeRefreshToken(token);
+      }
+    }
+    res.status(200).json({});
+  });
 
   // MCP endpoint — stateless mode (new transport per request)
   app.all('/mcp', bearerAuthMiddleware, async (req, res) => {

@@ -125,6 +125,26 @@ npm run dev
 npm run typecheck
 ```
 
+## Token Revocation
+
+To invalidate a token immediately (e.g. suspected leak, forcing re-auth):
+
+```bash
+# Revoke an access token (JWT)
+curl -X POST https://your-mcp-domain.com/revoke \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "token=<access_token>"
+
+# Revoke a refresh token (UUID)
+curl -X POST https://your-mcp-domain.com/revoke \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "token=<refresh_token>"
+```
+
+Always returns `200 OK` per [RFC 7009](https://datatracker.ietf.org/doc/html/rfc7009) — even if the token didn't exist.
+
+> **To invalidate all tokens at once:** rotate `JWT_SECRET` in `.env` and restart. All issued JWTs immediately fail signature verification.
+
 ## Deployment Notes
 
 - Expose port 3000 behind a reverse proxy (nginx, Caddy) with HTTPS

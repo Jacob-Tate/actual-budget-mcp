@@ -139,6 +139,10 @@ export function saveRefreshToken(record: RefreshTokenRecord): void {
   `).run(record.token, record.clientId, record.expiresAt);
 }
 
+export function revokeRefreshToken(token: string): void {
+  getAuthDb().prepare('DELETE FROM refresh_tokens WHERE token = ?').run(token);
+}
+
 export function consumeRefreshToken(token: string): RefreshTokenRecord | undefined {
   const db = getAuthDb();
   const now = Date.now();
