@@ -59,3 +59,13 @@ Actual Budget uses **integer milliunits**: `100` = $1.00, `1099` = $10.99. All t
 - No function > 50 lines
 - TypeScript strict mode — no `any` without comment justification
 - All errors must be logged with context before re-throwing
+
+## README Maintenance
+
+**Always keep README.md in sync when making changes:**
+
+- When adding a new tool, add it to the correct row in the Tools table
+- When adding a new tool group (new file in `src/mcp/tools/`), add a new row to the table
+- When adding/removing env vars, update the Environment Variables table
+- When adding new files to `src/`, update the Project Structure tree
+- The feature count in the Features section ("51 tools") must match the actual tool count — update it whenever tools are added or removed

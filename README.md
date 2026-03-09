@@ -4,7 +4,7 @@ An [MCP (Model Context Protocol)](https://modelcontextprotocol.io) server that g
 
 ## Features
 
-- **35 tools** covering accounts, transactions, categories, payees, automation rules, and budgets
+- **51 tools** covering accounts, transactions, categories, payees, automation rules, budgets, schedules, tags, analytics, and ad-hoc queries
 - **OAuth 2.0** authentication compatible with Claude.ai's MCP integration
 - **Single-user** design — your Actual Budget credentials are configured via environment variables, never stored in tokens
 - **Stateless HTTP** transport with `StreamableHTTPServerTransport`
@@ -18,9 +18,46 @@ An [MCP (Model Context Protocol)](https://modelcontextprotocol.io) server that g
 | Categories | `get-categories`, `get-category-groups`, `create-category`, `update-category`, `delete-category`, `create-category-group`, `update-category-group`, `delete-category-group` |
 | Payees | `get-payees`, `create-payee`, `update-payee`, `delete-payee`, `merge-payees` |
 | Rules | `get-rules`, `create-rule`, `update-rule`, `delete-rule` |
-| Budget | `get-budget-months`, `get-budget-month`, `set-budget-amount`, `set-budget-carryover`, `run-bank-sync`, `sync` |
+| Budget | `get-budget-months`, `get-budget-month`, `set-budget-amount`, `set-budget-carryover`, `hold-budget-for-next-month`, `reset-budget-hold`, `batch-set-budget-amounts`, `run-bank-sync`, `sync` |
+| Schedules | `get-schedules`, `create-schedule`, `update-schedule`, `delete-schedule` |
+| Tags | `get-tags`, `create-tag`, `update-tag`, `delete-tag` |
+| Analytics | `monthly-summary`, `spending-by-category`, `budget-vs-actual`, `balance-history` |
+| Query | `run-query` |
 
 > **Amounts** are always in milliunits: `100` = $1.00, `-4599` = -$45.99
+
+## Example Prompts
+
+Once connected, you can ask Claude things like:
+
+**Spending & Transactions**
+- "What did I spend on dining last month?"
+- "Show me all Amazon charges in the last 60 days"
+- "Categorize my last 20 uncategorized transactions"
+- "Find any transaction over $500 this year"
+
+**Budgeting**
+- "Set my Groceries budget to $500 for April"
+- "How am I tracking against my budget this month?"
+- "Which categories am I over budget on?"
+- "Copy this month's budget amounts to next month"
+
+**Financial Health**
+- "How has my dining spending changed over the last 6 months?"
+- "What's my income vs spending trend for Q1?"
+- "Which categories do I consistently overspend?"
+
+**Accounts & Payees**
+- "What's my current checking account balance?"
+- "Merge all 'Whole Foods' and 'Whole Foods Market' payees together"
+- "Show me my net worth across all accounts"
+
+**Schedules & Rules**
+- "What recurring bills are due in the next two weeks?"
+- "Create a rule to always categorize Spotify as Entertainment"
+- "Set up a monthly $1,200 rent transaction on the 1st"
+
+---
 
 ## Quick Start with Docker
 
@@ -117,9 +154,9 @@ src/
         ├── categories.ts
         ├── payees.ts
         ├── rules.ts
-        └── budget.ts
+        ├── budget.ts
+        ├── schedules.ts
+        ├── tags.ts
+        ├── analytics.ts
+        └── query.ts
 ```
-
-## Planned Features
-
-See [TODO.md](TODO.md) for planned analytics tools (monthly summary, spending by category, balance history, budget vs actual).
