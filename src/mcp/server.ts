@@ -10,6 +10,7 @@ import { registerScheduleTools } from './tools/schedules';
 import { registerQueryTools } from './tools/query';
 import { registerTagTools } from './tools/tags';
 import { registerLookupTools } from './tools/lookup';
+import { registerPayeeRuleTools } from './tools/payee-rules';
 
 export function createMcpServer(): McpServer {
   const server = new McpServer({
@@ -28,6 +29,7 @@ export function createMcpServer(): McpServer {
   registerQueryTools(server);
   registerTagTools(server);
   registerLookupTools(server);
+  registerPayeeRuleTools(server);
 
   return server;
 }

@@ -4,7 +4,7 @@ An [MCP (Model Context Protocol)](https://modelcontextprotocol.io) server that g
 
 ## Features
 
-- **52 tools** covering accounts, transactions, categories, payees, automation rules, budgets, schedules, tags, analytics, ad-hoc queries, and name-to-ID lookup
+- **56 tools** covering accounts, transactions, categories, payees, automation rules, payee rules, budgets, schedules, tags, analytics, ad-hoc queries, and name-to-ID lookup
 - **OAuth 2.0** authentication compatible with Claude.ai's MCP integration
 - **Single-user** design — your Actual Budget credentials are configured via environment variables, never stored in tokens
 - **Stateless HTTP** transport with `StreamableHTTPServerTransport`
@@ -18,6 +18,7 @@ An [MCP (Model Context Protocol)](https://modelcontextprotocol.io) server that g
 | Categories | `get-categories`, `get-category-groups`, `create-category`, `update-category`, `delete-category`, `create-category-group`, `update-category-group`, `delete-category-group` |
 | Payees | `get-payees`, `create-payee`, `update-payee`, `delete-payee`, `merge-payees` |
 | Rules | `get-rules`, `create-rule`, `update-rule`, `delete-rule` |
+| Payee Rules | `get-payee-rules`, `create-payee-rule`, `update-payee-rule`, `delete-payee-rule` |
 | Budget | `get-budget-months`, `get-budget-month`, `set-budget-amount`, `set-budget-carryover`, `hold-budget-for-next-month`, `reset-budget-hold`, `batch-set-budget-amounts`, `run-bank-sync`, `sync` |
 | Schedules | `get-schedules`, `create-schedule`, `update-schedule`, `delete-schedule` |
 | Tags | `get-tags`, `create-tag`, `update-tag`, `delete-tag` |
@@ -174,6 +175,7 @@ src/
         ├── transactions.ts
         ├── categories.ts
         ├── payees.ts
+        ├── payee-rules.ts
         ├── rules.ts
         ├── budget.ts
         ├── schedules.ts
