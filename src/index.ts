@@ -92,6 +92,13 @@ async function main(): Promise<void> {
   process.on('SIGTERM', () => { void shutdown(); });
   process.on('SIGINT', () => { void shutdown(); });
   process.on('unhandledRejection', (reason) => {
+    // The @actual-app/api runHandler has a bug where `void promise.then(...)`
+    // on a rejected handler creates a dangling rejected promise. These APIError
+    // rejections are already caught by tool try/catch blocks — don't crash for them.
+    if (reason !== null && typeof reason === 'object' && (reason as Record<string, unknown>).type === 'APIError') {
+      console.error('Unhandled APIError (suppressed crash):', (reason as Record<string, unknown>).message);
+      return;
+    }
     console.error('Unhandled promise rejection:', reason);
     process.exit(1);
   });

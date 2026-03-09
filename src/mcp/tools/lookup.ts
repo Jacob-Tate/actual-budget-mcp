@@ -17,6 +17,14 @@ function fail(error: unknown): { content: [{ type: 'text'; text: string }]; isEr
 
 const LOOKUP_TYPES = ['account', 'payee', 'category', 'schedule'] as const;
 
+// The underlying API requires plural table names
+const TYPE_TO_TABLE: Record<string, string> = {
+  account: 'accounts',
+  payee: 'payees',
+  category: 'categories',
+  schedule: 'schedules',
+};
+
 export function registerLookupTools(server: McpServer): void {
   server.registerTool('get-id-by-name', {
     description: 'Resolve a human-readable resource name to its internal UUID. Useful for finding IDs before acting on accounts, payees, categories, or schedules by name.',
@@ -27,7 +35,7 @@ export function registerLookupTools(server: McpServer): void {
   }, async ({ type, name }) => {
     try {
       actualClient.ensureReady();
-      const id = await api.getIDByName(type, name);
+      const id = await api.getIDByName(TYPE_TO_TABLE[type], name);
       return ok({ id: id ?? null });
     } catch (e) { return fail(e); }
   });
