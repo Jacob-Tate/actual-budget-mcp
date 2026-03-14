@@ -93,11 +93,20 @@ async function main(): Promise<void> {
   process.on('SIGINT', () => { void shutdown(); });
   process.on('unhandledRejection', (reason) => {
     // The @actual-app/api runHandler has a bug where `void promise.then(...)`
-    // on a rejected handler creates a dangling rejected promise. These APIError
-    // rejections are already caught by tool try/catch blocks — don't crash for them.
-    if (reason !== null && typeof reason === 'object' && (reason as Record<string, unknown>).type === 'APIError') {
-      console.error('Unhandled APIError (suppressed crash):', (reason as Record<string, unknown>).message);
-      return;
+    // on a rejected handler creates a dangling rejected promise. These rejections
+    // are already caught by tool try/catch blocks — don't crash for them.
+    if (reason !== null && typeof reason === 'object') {
+      const r = reason as Record<string, unknown>;
+      if (r.type === 'APIError') {
+        console.error('Unhandled APIError (suppressed crash):', r.message);
+        return;
+      }
+      // Plain errors thrown from @actual-app/api mutators (e.g. duplicate schedule name)
+      // also escape as unhandled rejections despite being caught by the tool's try/catch.
+      if (reason instanceof Error && typeof r.stack === 'string' && r.stack.includes('bundle.api.js')) {
+        console.error('Unhandled @actual-app/api error (suppressed crash):', reason.message);
+        return;
+      }
     }
     console.error('Unhandled promise rejection:', reason);
     process.exit(1);

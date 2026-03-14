@@ -58,6 +58,13 @@ export function registerScheduleTools(server: McpServer): void {
   }, async (fields) => {
     try {
       actualClient.ensureReady();
+      if (fields.name) {
+        const existing = await actualClient.api.getSchedules();
+        const duplicate = existing.find((s: { name?: string }) => s.name === fields.name);
+        if (duplicate) {
+          return fail(new Error(`A schedule named "${fields.name}" already exists (id: ${duplicate.id})`));
+        }
+      }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const id = await actualClient.api.createSchedule(fields as any);
       return ok({ id });
