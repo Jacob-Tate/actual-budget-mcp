@@ -36,7 +36,7 @@ export function registerQueryTools(server: McpServer): void {
   server.registerTool('run-query', {
     description:
       'Run an AQL query against the Actual Budget database. ' +
-      'Amounts are integers in milliunits (100 = $1.00). ' +
+      'Amounts in milliunits. ' +
       'Use this for ad-hoc questions not covered by other tools. ' +
       'Valid tables: transactions, accounts, categories, category_groups, payees, rules, schedules.',
     inputSchema: {

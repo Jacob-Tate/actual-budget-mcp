@@ -25,27 +25,27 @@ export function registerAccountTools(server: McpServer): void {
   });
 
   server.registerTool('get-account-balance', {
-    description: 'Get the balance for an account. Amounts are integers in milliunits (100 = $1.00).',
+    description: 'Get the balance for an account in milliunits.',
     inputSchema: {
       id: z.string().describe('Account ID'),
-      cutoff: z.string().optional().describe('ISO date string (YYYY-MM-DD). Defaults to today.'),
+      cutoff: z.string().optional().describe('YYYY-MM-DD, defaults to today'),
     },
   }, async ({ id, cutoff }) => {
     try {
       actualClient.ensureReady();
       const cutoffDate = cutoff ? new Date(cutoff) : undefined;
       const balance = await actualClient.api.getAccountBalance(id, cutoffDate);
-      return ok({ id, balance, note: '100 = $1.00' });
+      return ok({ id, balance });
     } catch (e) { return fail(e); }
   });
 
   server.registerTool('create-account', {
-    description: 'Create a new budget account. initialBalance is in milliunits (100 = $1.00).',
+    description: 'Create a new budget account.',
     inputSchema: {
       name: z.string().describe('Account name'),
       type: z.enum(ACCOUNT_TYPES).describe('Account type'),
       offBudget: z.boolean().optional().describe('If true, account is off-budget'),
-      initialBalance: z.number().int().optional().describe('Initial balance in milliunits (100 = $1.00)'),
+      initialBalance: z.number().int().optional().describe('Initial balance in milliunits'),
     },
   }, async ({ name, type, offBudget, initialBalance }) => {
     try {

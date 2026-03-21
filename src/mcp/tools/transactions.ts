@@ -14,7 +14,7 @@ function fail(error: unknown): { content: [{ type: 'text'; text: string }]; isEr
 
 // Subtransaction schema for split transactions
 const subtransactionSchema = z.object({
-  amount: z.number().int().describe('Amount in milliunits (100 = $1.00, negative = expense). All subtransaction amounts must sum to the parent amount.'),
+  amount: z.number().int().describe('Amount in milliunits, negative = expense. Must sum to parent amount.'),
   category: z.string().optional().describe('Category ID'),
   notes: z.string().optional().describe('Notes/memo for this line item'),
   payee: z.string().optional().describe('Payee ID (defaults to parent payee if omitted)'),
@@ -23,8 +23,8 @@ const subtransactionSchema = z.object({
 // Core transaction fields — field names match the Actual Budget internal API
 // (uses "category" and "payee", not "category_id"/"payee_id")
 const transactionSchema = {
-  date: z.string().describe('Date in YYYY-MM-DD format'),
-  amount: z.number().int().describe('Amount in milliunits (100 = $1.00, negative = expense)'),
+  date: z.string().describe('YYYY-MM-DD'),
+  amount: z.number().int().describe('Amount in milliunits, negative = expense'),
   payee: z.string().optional().describe('Payee ID'),
   payee_name: z.string().optional().describe('Payee name — creates a new payee if not found. Alternative to payee ID.'),
   category: z.string().optional().describe('Category ID. Omit for split transactions (use subtransactions instead).'),
@@ -38,11 +38,11 @@ const transactionSchema = {
 
 export function registerTransactionTools(server: McpServer): void {
   server.registerTool('get-transactions', {
-    description: 'Get all transactions for an account within a date range. Amounts are in milliunits (100 = $1.00). Split transactions include a subtransactions array.',
+    description: 'Get all transactions for an account within a date range. Amounts in milliunits. Split transactions include a subtransactions array.',
     inputSchema: {
       accountId: z.string().describe('Account ID'),
-      startDate: z.string().describe('Start date YYYY-MM-DD (inclusive)'),
-      endDate: z.string().describe('End date YYYY-MM-DD (inclusive)'),
+      startDate: z.string().describe('YYYY-MM-DD (inclusive)'),
+      endDate: z.string().describe('YYYY-MM-DD (inclusive)'),
     },
   }, async ({ accountId, startDate, endDate }) => {
     try {
@@ -81,10 +81,10 @@ export function registerTransactionTools(server: McpServer): void {
   });
 
   server.registerTool('update-transaction', {
-    description: 'Update fields of an existing transaction. Amount is in milliunits (100 = $1.00).',
+    description: 'Update fields of an existing transaction.',
     inputSchema: {
       id: z.string().describe('Transaction ID'),
-      date: z.string().optional().describe('New date YYYY-MM-DD'),
+      date: z.string().optional().describe('YYYY-MM-DD'),
       amount: z.number().int().optional().describe('New amount in milliunits'),
       payee: z.string().optional().describe('New payee ID'),
       category: z.string().optional().describe('New category ID'),

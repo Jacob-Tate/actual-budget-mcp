@@ -60,6 +60,8 @@ Actual Budget uses **integer milliunits**: `100` = $1.00, `1099` = $10.99. All t
 - TypeScript strict mode — no `any` without comment justification
 - All errors must be logged with context before re-throwing
 - Tool responses must use `JSON.stringify(data)` — never `JSON.stringify(data, null, 2)`. Pretty-printing wastes 40-60% of response tokens.
+- Tool descriptions must not include `(100 = $1.00)` — just say "milliunits". The convention is documented in Amount Convention above.
+- Date format params must use the pattern directly as the description: `'YYYY-MM-DD'` or `'YYYY-MM'`, not `'Date in YYYY-MM-DD format'` or `'Month in YYYY-MM format (e.g. "2024-03")'`.
 
 ## README Maintenance
 

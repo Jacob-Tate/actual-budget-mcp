@@ -23,9 +23,9 @@ export function registerBudgetTools(server: McpServer): void {
   });
 
   server.registerTool('get-budget-month', {
-    description: 'Get budget data for a specific month, including all category groups with their budgeted and spent amounts. Amounts are in milliunits (100 = $1.00).',
+    description: 'Get budget data for a specific month, including all category groups with their budgeted and spent amounts. Amounts in milliunits.',
     inputSchema: {
-      month: z.string().describe('Month in YYYY-MM format (e.g. "2024-03")'),
+      month: z.string().describe('YYYY-MM'),
     },
   }, async ({ month }) => {
     try {
@@ -35,11 +35,11 @@ export function registerBudgetTools(server: McpServer): void {
   });
 
   server.registerTool('set-budget-amount', {
-    description: 'Set the budgeted amount for a category in a given month. Amount is in milliunits (100 = $1.00).',
+    description: 'Set the budgeted amount for a category in a given month.',
     inputSchema: {
-      month: z.string().describe('Month in YYYY-MM format'),
+      month: z.string().describe('YYYY-MM'),
       categoryId: z.string().describe('Category ID'),
-      amount: z.number().int().describe('Budgeted amount in milliunits (100 = $1.00)'),
+      amount: z.number().int().describe('Budgeted amount in milliunits'),
     },
   }, async ({ month, categoryId, amount }) => {
     try {
@@ -52,7 +52,7 @@ export function registerBudgetTools(server: McpServer): void {
   server.registerTool('set-budget-carryover', {
     description: 'Enable or disable rollover (carryover) for a budget category. When enabled, unspent money carries forward to the next month.',
     inputSchema: {
-      month: z.string().describe('Month in YYYY-MM format'),
+      month: z.string().describe('YYYY-MM'),
       categoryId: z.string().describe('Category ID'),
       enabled: z.boolean().describe('True to enable carryover, false to disable'),
     },
@@ -78,10 +78,10 @@ export function registerBudgetTools(server: McpServer): void {
   });
 
   server.registerTool('hold-budget-for-next-month', {
-    description: 'Hold a portion of this month\'s available funds for use next month. Amount is in milliunits (100 = $1.00).',
+    description: 'Hold a portion of this month\'s available funds for use next month.',
     inputSchema: {
-      month: z.string().describe('Month in YYYY-MM format'),
-      amount: z.number().int().describe('Amount to hold in milliunits (100 = $1.00)'),
+      month: z.string().describe('YYYY-MM'),
+      amount: z.number().int().describe('Amount to hold in milliunits'),
     },
   }, async ({ month, amount }) => {
     try {
@@ -94,7 +94,7 @@ export function registerBudgetTools(server: McpServer): void {
   server.registerTool('reset-budget-hold', {
     description: 'Reset (clear) the budget hold for a given month, releasing held funds back to available.',
     inputSchema: {
-      month: z.string().describe('Month in YYYY-MM format'),
+      month: z.string().describe('YYYY-MM'),
     },
   }, async ({ month }) => {
     try {
@@ -105,12 +105,12 @@ export function registerBudgetTools(server: McpServer): void {
   });
 
   server.registerTool('batch-set-budget-amounts', {
-    description: 'Set budgeted amounts for multiple categories in a single atomic operation. Amounts are in milliunits (100 = $1.00).',
+    description: 'Set budgeted amounts for multiple categories in a single atomic operation.',
     inputSchema: {
-      month: z.string().describe('Month in YYYY-MM format (e.g. "2024-03")'),
+      month: z.string().describe('YYYY-MM'),
       updates: z.array(z.object({
         categoryId: z.string().describe('Category ID'),
-        amount: z.number().int().describe('Budgeted amount in milliunits (100 = $1.00)'),
+        amount: z.number().int().describe('Budgeted amount in milliunits'),
       })).describe('List of category budget updates to apply'),
     },
   }, async ({ month, updates }) => {

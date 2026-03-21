@@ -69,10 +69,10 @@ function dateRange(startDate: string, endDate: string, interval: 'daily' | 'week
 
 export function registerAnalyticsTools(server: McpServer): void {
   server.registerTool('monthly-summary', {
-    description: 'Aggregate income vs. spending totals per month. Returns budgeted and actual amounts for income and expense groups, plus net. Amounts in milliunits (100 = $1.00).',
+    description: 'Aggregate income vs. spending totals per month. Returns budgeted and actual amounts for income and expense groups, plus net. Amounts in milliunits.',
     inputSchema: {
-      startMonth: z.string().describe('Start month in YYYY-MM format'),
-      endMonth: z.string().optional().describe('End month in YYYY-MM format (inclusive). Defaults to startMonth.'),
+      startMonth: z.string().describe('YYYY-MM'),
+      endMonth: z.string().optional().describe('YYYY-MM (inclusive), defaults to startMonth'),
     },
   }, async ({ startMonth, endMonth }) => {
     try {
@@ -109,10 +109,10 @@ export function registerAnalyticsTools(server: McpServer): void {
   });
 
   server.registerTool('spending-by-category', {
-    description: 'Break down spending across categories for a date range. Fetches transactions from all accounts and groups by category. Amounts in milliunits (100 = $1.00, negative = expense). Excludes transfers and income by default.',
+    description: 'Break down spending across categories for a date range. Fetches transactions from all on-budget accounts and groups by category. Amounts in milliunits, negative = expense. Excludes transfers and income by default.',
     inputSchema: {
-      startDate: z.string().describe('Start date in YYYY-MM-DD format (inclusive)'),
-      endDate: z.string().describe('End date in YYYY-MM-DD format (inclusive)'),
+      startDate: z.string().describe('YYYY-MM-DD (inclusive)'),
+      endDate: z.string().describe('YYYY-MM-DD (inclusive)'),
       includeIncome: z.boolean().optional().describe('Include income transactions (positive amounts). Default: false.'),
     },
   }, async ({ startDate, endDate, includeIncome = false }) => {
@@ -150,10 +150,10 @@ export function registerAnalyticsTools(server: McpServer): void {
   });
 
   server.registerTool('budget-vs-actual', {
-    description: 'Compare budgeted amounts to actual spending per category for one or more months. Returns each category with its budgeted amount, actual spent, variance (budgeted - spent), and percentage used. Amounts in milliunits (100 = $1.00). Expense spent values are negative.',
+    description: 'Compare budgeted amounts to actual spending per category for one or more months. Returns each category with budgeted, actual, variance, and percentUsed. Amounts in milliunits, expense actual is negative.',
     inputSchema: {
-      startMonth: z.string().describe('Start month in YYYY-MM format'),
-      endMonth: z.string().optional().describe('End month in YYYY-MM format (inclusive). Defaults to startMonth.'),
+      startMonth: z.string().describe('YYYY-MM'),
+      endMonth: z.string().optional().describe('YYYY-MM (inclusive), defaults to startMonth'),
       includeIncome: z.boolean().optional().describe('Include income category groups. Default: false.'),
     },
   }, async ({ startMonth, endMonth, includeIncome = false }) => {
@@ -204,11 +204,11 @@ export function registerAnalyticsTools(server: McpServer): void {
   });
 
   server.registerTool('balance-history', {
-    description: 'Account balance over time, computed from transaction history. Returns balance snapshots at each interval point. Amounts in milliunits (100 = $1.00).',
+    description: 'Account balance over time, computed from transaction history. Returns balance snapshots at each interval point. Amounts in milliunits.',
     inputSchema: {
       accountId: z.string().describe('Account ID'),
-      startDate: z.string().describe('Start date in YYYY-MM-DD format'),
-      endDate: z.string().describe('End date in YYYY-MM-DD format'),
+      startDate: z.string().describe('YYYY-MM-DD'),
+      endDate: z.string().describe('YYYY-MM-DD'),
       interval: z.enum(['daily', 'weekly', 'monthly']).optional().describe('Sampling interval. Default: monthly.'),
     },
   }, async ({ accountId, startDate, endDate, interval = 'monthly' }) => {

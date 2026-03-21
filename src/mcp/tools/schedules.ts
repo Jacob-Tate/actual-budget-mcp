@@ -22,10 +22,10 @@ const RecurConfigSchema = z.object({
   interval: z.number().int().optional(),
   patterns: z.array(RecurPatternSchema).optional(),
   skipWeekend: z.boolean().optional(),
-  start: z.string().describe('ISO date string YYYY-MM-DD'),
+  start: z.string().describe('YYYY-MM-DD'),
   endMode: z.enum(['never', 'after_n_occurrences', 'on_date']).optional(),
   endOccurrences: z.number().int().optional(),
-  endDate: z.string().optional().describe('ISO date string YYYY-MM-DD'),
+  endDate: z.string().optional().describe('YYYY-MM-DD'),
   weekendSolveMode: z.enum(['before', 'after']).optional(),
 });
 
@@ -33,10 +33,10 @@ const ScheduleInputSchema = {
   name: z.string().optional().describe('Schedule name'),
   payee: z.string().optional().describe('Payee ID'),
   account: z.string().optional().describe('Account ID'),
-  amount: z.number().int().optional().describe('Amount in milliunits (100 = $1.00). Negative for expenses.'),
+  amount: z.number().int().optional().describe('Amount in milliunits, negative for expenses'),
   amountOp: z.enum(['is', 'isapprox', 'isbetween']).describe('Amount match operator'),
   date: z.union([z.string(), RecurConfigSchema]).describe(
-    'ISO date string (YYYY-MM-DD) for one-time, or recurrence config object for recurring schedules',
+    'YYYY-MM-DD for one-time, or recurrence config for recurring',
   ),
   posts_transaction: z.boolean().optional().describe('Whether the schedule auto-posts a transaction'),
   completed: z.boolean().optional().describe('Whether the schedule is completed/inactive'),
@@ -44,7 +44,7 @@ const ScheduleInputSchema = {
 
 export function registerScheduleTools(server: McpServer): void {
   server.registerTool('get-schedules', {
-    description: 'Get all schedules (recurring transactions). Amounts are in milliunits (100 = $1.00).',
+    description: 'Get all schedules (recurring transactions). Amounts in milliunits.',
   }, async () => {
     try {
       actualClient.ensureReady();
@@ -53,7 +53,7 @@ export function registerScheduleTools(server: McpServer): void {
   });
 
   server.registerTool('create-schedule', {
-    description: 'Create a new schedule (recurring transaction). Amounts are in milliunits (100 = $1.00, -1099 = -$10.99).',
+    description: 'Create a new schedule (recurring transaction). Amounts in milliunits.',
     inputSchema: ScheduleInputSchema,
   }, async (fields) => {
     try {
@@ -72,7 +72,7 @@ export function registerScheduleTools(server: McpServer): void {
   });
 
   server.registerTool('update-schedule', {
-    description: 'Update fields of an existing schedule. Amounts are in milliunits (100 = $1.00).',
+    description: 'Update fields of an existing schedule. Amounts in milliunits.',
     inputSchema: {
       id: z.string().describe('Schedule ID'),
       resetNextDate: z.boolean().optional().describe('If true, recalculate next_date from recurrence rule'),
