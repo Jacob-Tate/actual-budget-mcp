@@ -59,6 +59,7 @@ Actual Budget uses **integer milliunits**: `100` = $1.00, `1099` = $10.99. All t
 - No function > 50 lines
 - TypeScript strict mode — no `any` without comment justification
 - All errors must be logged with context before re-throwing
+- Tool responses must use `JSON.stringify(data)` — never `JSON.stringify(data, null, 2)`. Pretty-printing wastes 40-60% of response tokens.
 
 ## README Maintenance
 

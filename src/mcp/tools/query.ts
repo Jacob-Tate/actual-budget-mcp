@@ -18,7 +18,7 @@ interface AQLQueryBuilder {
 }
 
 function ok(data: unknown): { content: [{ type: 'text'; text: string }] } {
-  return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  return { content: [{ type: 'text', text: JSON.stringify(data) }] };
 }
 
 function fail(error: unknown): { content: [{ type: 'text'; text: string }]; isError: true } {
