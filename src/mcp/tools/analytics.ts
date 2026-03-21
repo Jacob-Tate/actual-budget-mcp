@@ -109,7 +109,7 @@ export function registerAnalyticsTools(server: McpServer): void {
   });
 
   server.registerTool('spending-by-category', {
-    description: 'Break down spending across categories for a date range. Fetches transactions from all on-budget accounts and groups by category. Amounts in milliunits, negative = expense. Excludes transfers and income by default.',
+    description: 'Break down spending across categories for a date range. Fetches transactions from all on-budget accounts and groups by category. Amounts in milliunits, negative = expense. Excludes transfers and income by default. Returns {categoryId: total} sorted highest spend first.',
     inputSchema: {
       startDate: z.string().describe('YYYY-MM-DD (inclusive)'),
       endDate: z.string().describe('YYYY-MM-DD (inclusive)'),
@@ -141,16 +141,14 @@ export function registerAnalyticsTools(server: McpServer): void {
         }
       }
 
-      const result = Array.from(totals.entries())
-        .map(([categoryId, total]) => ({ categoryId, total }))
-        .sort((a, b) => a.total - b.total); // most negative (highest spend) first
-
-      return ok(result);
+      // Return as {categoryId: total} map sorted most negative (highest spend) first
+      const sorted = Array.from(totals.entries()).sort((a, b) => a[1] - b[1]);
+      return ok(Object.fromEntries(sorted));
     } catch (e) { return fail(e); }
   });
 
   server.registerTool('budget-vs-actual', {
-    description: 'Compare budgeted amounts to actual spending per category for one or more months. Returns each category with budgeted, actual, variance, and percentUsed. Amounts in milliunits, expense actual is negative.',
+    description: 'Compare budgeted amounts to actual spending per category for one or more months. Amounts in milliunits, expense actual is negative. Returns {month: {groupId: {name, categories: {catId: {name, budgeted, actual, variance, pct}}}}}.',
     inputSchema: {
       startMonth: z.string().describe('YYYY-MM'),
       endMonth: z.string().optional().describe('YYYY-MM (inclusive), defaults to startMonth'),
@@ -164,47 +162,34 @@ export function registerAnalyticsTools(server: McpServer): void {
         months.map(m => actualClient.api.getBudgetMonth(m) as Promise<BudgetMonthData>)
       );
 
-      const result = budgetData.map(data => {
-        const categories: {
-          groupId: string;
-          groupName: string;
-          categoryId: string;
-          categoryName: string;
-          budgeted: number;
-          actual: number;
-          variance: number;
-          percentUsed: number | null;
-        }[] = [];
+      const result: Record<string, Record<string, {
+        name: string;
+        categories: Record<string, { name: string; budgeted: number; actual: number; variance: number; pct: number | null }>;
+      }>> = {};
 
+      for (const data of budgetData) {
+        const groups: typeof result[string] = {};
         for (const group of data.categoryGroups) {
           if (!includeIncome && group.is_income) continue;
+          const categories: typeof groups[string]['categories'] = {};
           for (const cat of group.categories) {
             const actual = cat.spent;
             const budgeted = cat.budgeted;
             const variance = budgeted + actual; // actual is negative for expenses
-            const percentUsed = budgeted !== 0 ? Math.round((-actual / budgeted) * 10000) / 100 : null;
-            categories.push({
-              groupId: group.id,
-              groupName: group.name,
-              categoryId: cat.id,
-              categoryName: cat.name,
-              budgeted,
-              actual,
-              variance,
-              percentUsed,
-            });
+            const pct = budgeted !== 0 ? Math.round((-actual / budgeted) * 10000) / 100 : null;
+            categories[cat.id] = { name: cat.name, budgeted, actual, variance, pct };
           }
+          groups[group.id] = { name: group.name, categories };
         }
-
-        return { month: data.month, categories };
-      });
+        result[data.month] = groups;
+      }
 
       return ok(result);
     } catch (e) { return fail(e); }
   });
 
   server.registerTool('balance-history', {
-    description: 'Account balance over time, computed from transaction history. Returns balance snapshots at each interval point. Amounts in milliunits.',
+    description: 'Account balance over time, computed from transaction history. Amounts in milliunits. Returns [[date, balance], ...] sorted chronologically.',
     inputSchema: {
       accountId: z.string().describe('Account ID'),
       startDate: z.string().describe('YYYY-MM-DD'),
@@ -217,10 +202,10 @@ export function registerAnalyticsTools(server: McpServer): void {
       const dates = dateRange(startDate, endDate, interval);
 
       const balances = await Promise.all(
-        dates.map(async d => ({
-          date: d,
-          balance: await actualClient.api.getAccountBalance(accountId, new Date(d + 'T00:00:00')),
-        }))
+        dates.map(async d => [
+          d,
+          await actualClient.api.getAccountBalance(accountId, new Date(d + 'T00:00:00')),
+        ] as [string, number])
       );
 
       return ok(balances);
