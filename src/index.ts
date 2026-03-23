@@ -2,6 +2,10 @@ import express from 'express';
 import { mcpAuthRouter } from '@modelcontextprotocol/sdk/server/auth/router.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import jwt from 'jsonwebtoken';
+import multer from 'multer';
+import fs from 'fs';
+import path from 'path';
+import { v4 as uuidv4 } from 'uuid';
 import { config } from './config';
 import { oauthProvider } from './auth/oauth';
 import { bearerAuthMiddleware } from './auth/middleware';
@@ -51,6 +55,33 @@ async function main(): Promise<void> {
       }
     }
     res.status(200).json({});
+  });
+
+  // File upload endpoint — accepts a single multipart file, stores it temporarily,
+  // returns { uploadId, filename } for use with the upload-document MCP tool.
+  // This avoids passing large base64 strings through the MCP tool call context.
+  const uploadDir = path.join(config.actualDataDir, 'uploads');
+  fs.mkdirSync(uploadDir, { recursive: true });
+
+  const multerStorage = multer.diskStorage({
+    destination: (_req, _file, cb) => {
+      const dir = path.join(uploadDir, uuidv4());
+      fs.mkdirSync(dir, { recursive: true });
+      cb(null, dir);
+    },
+    filename: (_req, file, cb) => cb(null, file.originalname),
+  });
+
+  const upload = multer({ storage: multerStorage });
+
+  app.post('/upload', bearerAuthMiddleware, upload.single('file'), (req, res) => {
+    if (!req.file) {
+      res.status(400).json({ error: 'No file provided. Send a multipart/form-data request with a "file" field.' });
+      return;
+    }
+    const uploadId = path.basename(path.dirname(req.file.path));
+    console.log(`[upload] stored ${req.file.originalname} as uploadId=${uploadId}`);
+    res.json({ uploadId, filename: req.file.originalname });
   });
 
   // MCP endpoint — stateless mode (new transport per request)
