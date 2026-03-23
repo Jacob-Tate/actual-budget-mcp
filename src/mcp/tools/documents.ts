@@ -1,7 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import fs from 'fs';
-import path from 'path';
 import { config } from '../../config';
 
 const MIME: Record<string, string> = {
@@ -32,30 +30,12 @@ function buildTitle(payee?: string, transactionDate?: string): string {
   return 'Receipt';
 }
 
-function consumeUpload(uploadId: string): { buffer: Buffer; filename: string } {
-  const dir = path.join(config.actualDataDir, 'uploads', uploadId);
-  const files = fs.readdirSync(dir);
-  if (files.length === 0) throw new Error(`No file found for uploadId: ${uploadId}`);
-  const filename = files[0];
-  const buffer = fs.readFileSync(path.join(dir, filename));
-  fs.rmSync(dir, { recursive: true, force: true });
-  return { buffer, filename };
-}
-
 export function registerDocumentTools(server: McpServer): void {
   server.registerTool('upload-document', {
-    description: `Upload a receipt or document to Paperless-NGX.
-
-IMPORTANT — to avoid context overflow with large images, always use the uploadId workflow:
-1. Run: curl -s -X POST ${config.baseUrl}/upload -F "file=@/path/to/image.jpg"
-2. Copy the uploadId from the response
-3. Call this tool with that uploadId
-
-The /upload endpoint requires no authentication, accepts images up to 5 MB, and stores them for 24 hours.`,
+    description: 'Upload a receipt or document to Paperless-NGX. Automatically applies the configured receipt tag and stores transaction metadata as custom fields.',
     inputSchema: {
-      uploadId: z.string().optional().describe('ID from POST /upload — preferred over content'),
-      content: z.string().optional().describe('Base64-encoded file content — only for small files when uploadId is not available'),
-      filename: z.string().optional().describe('Required when using content; inferred from upload when using uploadId'),
+      content: z.string().describe('Base64-encoded file content'),
+      filename: z.string().describe('Filename including extension (e.g. receipt.jpg)'),
       title: z.string().optional().describe('Document title — auto-generated from payee and date if omitted'),
       created: z.string().optional().describe('YYYY-MM-DD'),
       payee: z.string().optional().describe('Payee name'),
@@ -65,35 +45,24 @@ The /upload endpoint requires no authentication, accepts images up to 5 MB, and 
       transactionDate: z.string().optional().describe('YYYY-MM-DD'),
       tags: z.array(z.number().int()).optional().describe('Additional Paperless-NGX tag IDs'),
     },
-  }, async ({ uploadId, content, filename, title, created, payee, accountId, accountName, transactionId, transactionDate, tags }) => {
+  }, async ({ content, filename, title, created, payee, accountId, accountName, transactionId, transactionDate, tags }) => {
     try {
       if (!config.paperlessUrl || !config.paperlessToken) {
         return fail('Paperless-NGX is not configured. Set PAPERLESS_URL and PAPERLESS_TOKEN environment variables.');
       }
 
-      let buffer: Buffer;
-      let resolvedFilename: string;
-
-      if (uploadId) {
-        const upload = consumeUpload(uploadId);
-        buffer = upload.buffer;
-        resolvedFilename = filename ?? upload.filename;
-      } else if (content && filename) {
-        buffer = Buffer.from(content, 'base64');
-        resolvedFilename = filename;
-      } else {
-        return fail('Provide either uploadId or both content and filename.');
-      }
-
-      const ext = resolvedFilename.split('.').pop()?.toLowerCase() ?? '';
+      const ext = filename.split('.').pop()?.toLowerCase() ?? '';
       const mimeType = MIME[ext] ?? 'application/octet-stream';
+
       const resolvedTitle = title ?? buildTitle(payee, transactionDate);
 
+      // Merge receipt tag with any caller-supplied tags
       const allTags = [...(tags ?? [])];
       if (config.paperlessReceiptTagId && !allTags.includes(config.paperlessReceiptTagId)) {
         allTags.push(config.paperlessReceiptTagId);
       }
 
+      // Build custom fields from env-configured field IDs
       const customFields: { field: number; value: string }[] = [];
       const fieldMap: [number | undefined, string | undefined][] = [
         [config.paperlessFieldPayee, payee],
@@ -108,13 +77,17 @@ The /upload endpoint requires no authentication, accepts images up to 5 MB, and 
         }
       }
 
+      const buffer = Buffer.from(content, 'base64');
       const blob = new Blob([buffer], { type: mimeType });
+
       const form = new FormData();
-      form.append('document', blob, resolvedFilename);
+      form.append('document', blob, filename);
       form.append('title', resolvedTitle);
       if (created ?? transactionDate) form.append('created', created ?? transactionDate!);
       allTags.forEach(t => form.append('tags', String(t)));
-      if (customFields.length > 0) form.append('custom_fields', JSON.stringify(customFields));
+      if (customFields.length > 0) {
+        form.append('custom_fields', JSON.stringify(customFields));
+      }
 
       const res = await fetch(`${config.paperlessUrl}/api/documents/post_document/`, {
         method: 'POST',
@@ -127,7 +100,8 @@ The /upload endpoint requires no authentication, accepts images up to 5 MB, and 
         return fail(`Paperless-NGX returned ${res.status}: ${text}`);
       }
 
-      return ok(await res.json() as unknown);
+      const data = await res.json() as unknown;
+      return ok(data);
     } catch (e) { return fail(e); }
   });
 }

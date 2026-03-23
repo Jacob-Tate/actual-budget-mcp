@@ -2,29 +2,12 @@ import express from 'express';
 import { mcpAuthRouter } from '@modelcontextprotocol/sdk/server/auth/router.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import jwt from 'jsonwebtoken';
-import multer, { MulterError } from 'multer';
-import fs from 'fs';
-import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
 import { config } from './config';
 import { oauthProvider } from './auth/oauth';
 import { bearerAuthMiddleware } from './auth/middleware';
 import { revokeToken, revokeRefreshToken } from './auth/store';
 import { createMcpServer } from './mcp/server';
 import { actualClient } from './actual/client';
-
-const UPLOAD_TTL_MS = 24 * 60 * 60 * 1000;
-
-function cleanupStaleUploads(uploadDir: string): void {
-  if (!fs.existsSync(uploadDir)) return;
-  const cutoff = Date.now() - UPLOAD_TTL_MS;
-  for (const entry of fs.readdirSync(uploadDir)) {
-    const dir = path.join(uploadDir, entry);
-    try {
-      if (fs.statSync(dir).mtimeMs < cutoff) fs.rmSync(dir, { recursive: true, force: true });
-    } catch { /* ignore */ }
-  }
-}
 
 async function main(): Promise<void> {
   await actualClient.initialize();
@@ -68,53 +51,6 @@ async function main(): Promise<void> {
       }
     }
     res.status(200).json({});
-  });
-
-  // Temporary image upload endpoint — unauthenticated, images only, 5 MB limit, 24-hour TTL.
-  // Claude curls the file here first, then passes the returned uploadId to upload-document.
-  const uploadDir = path.join(config.actualDataDir, 'uploads');
-  fs.mkdirSync(uploadDir, { recursive: true });
-  cleanupStaleUploads(uploadDir);
-  setInterval(() => cleanupStaleUploads(uploadDir), 60 * 60 * 1000).unref();
-
-  const upload = multer({
-    limits: { fileSize: 5 * 1024 * 1024 },
-    fileFilter: (_req, file, cb) => {
-      if (!file.mimetype.startsWith('image/')) {
-        cb(new Error('Only image files are accepted'));
-        return;
-      }
-      cb(null, true);
-    },
-    storage: multer.diskStorage({
-      destination: (_req, _file, cb) => {
-        const dir = path.join(uploadDir, uuidv4());
-        fs.mkdirSync(dir, { recursive: true });
-        cb(null, dir);
-      },
-      filename: (_req, file, cb) => cb(null, file.originalname),
-    }),
-  });
-
-  app.post('/upload', upload.single('file'), (req, res) => {
-    if (!req.file) {
-      res.status(400).json({ error: 'No file provided. Send a multipart/form-data request with a "file" field.' });
-      return;
-    }
-    const uploadId = path.basename(path.dirname(req.file.path));
-    res.json({ uploadId, filename: req.file.originalname });
-  });
-
-  app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    if (err instanceof MulterError && err.code === 'LIMIT_FILE_SIZE') {
-      res.status(413).json({ error: 'File exceeds 5 MB limit' });
-      return;
-    }
-    if (err instanceof Error) {
-      res.status(400).json({ error: err.message });
-      return;
-    }
-    res.status(500).json({ error: 'Unknown error' });
   });
 
   // MCP endpoint — stateless mode (new transport per request)
