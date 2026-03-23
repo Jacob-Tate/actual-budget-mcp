@@ -1,7 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import fs from 'fs';
-import path from 'path';
 import { config } from '../../config';
 
 const MIME: Record<string, string> = {
@@ -32,24 +30,12 @@ function buildTitle(payee?: string, transactionDate?: string): string {
   return 'Receipt';
 }
 
-/** Read a temp upload by ID, then delete it. Returns { buffer, filename }. */
-function consumeUpload(uploadId: string): { buffer: Buffer; filename: string } {
-  const dir = path.join(config.actualDataDir, 'uploads', uploadId);
-  const files = fs.readdirSync(dir);
-  if (files.length === 0) throw new Error(`No file found for uploadId: ${uploadId}`);
-  const filename = files[0];
-  const buffer = fs.readFileSync(path.join(dir, filename));
-  fs.rmSync(dir, { recursive: true, force: true });
-  return { buffer, filename };
-}
-
 export function registerDocumentTools(server: McpServer): void {
   server.registerTool('upload-document', {
-    description: 'Upload a receipt or document to Paperless-NGX. Prefer uploadId (from POST /upload) over content to avoid large base64 in the context window.',
+    description: 'Upload a receipt or document to Paperless-NGX. Automatically applies the configured receipt tag and stores transaction metadata as custom fields.',
     inputSchema: {
-      uploadId: z.string().optional().describe('ID returned by POST /upload — preferred over content for large files'),
-      content: z.string().optional().describe('Base64-encoded file content — only use for small files; prefer uploadId'),
-      filename: z.string().optional().describe('Filename including extension — required when using content, inferred from upload when using uploadId'),
+      content: z.string().describe('Base64-encoded file content'),
+      filename: z.string().describe('Filename including extension (e.g. receipt.jpg)'),
       title: z.string().optional().describe('Document title — auto-generated from payee and date if omitted'),
       created: z.string().optional().describe('YYYY-MM-DD'),
       payee: z.string().optional().describe('Payee name'),
@@ -59,27 +45,13 @@ export function registerDocumentTools(server: McpServer): void {
       transactionDate: z.string().optional().describe('YYYY-MM-DD'),
       tags: z.array(z.number().int()).optional().describe('Additional Paperless-NGX tag IDs'),
     },
-  }, async ({ uploadId, content, filename, title, created, payee, accountId, accountName, transactionId, transactionDate, tags }) => {
+  }, async ({ content, filename, title, created, payee, accountId, accountName, transactionId, transactionDate, tags }) => {
     try {
       if (!config.paperlessUrl || !config.paperlessToken) {
         return fail('Paperless-NGX is not configured. Set PAPERLESS_URL and PAPERLESS_TOKEN environment variables.');
       }
 
-      let buffer: Buffer;
-      let resolvedFilename: string;
-
-      if (uploadId) {
-        const upload = consumeUpload(uploadId);
-        buffer = upload.buffer;
-        resolvedFilename = filename ?? upload.filename;
-      } else if (content && filename) {
-        buffer = Buffer.from(content, 'base64');
-        resolvedFilename = filename;
-      } else {
-        return fail('Provide either uploadId or both content and filename.');
-      }
-
-      const ext = resolvedFilename.split('.').pop()?.toLowerCase() ?? '';
+      const ext = filename.split('.').pop()?.toLowerCase() ?? '';
       const mimeType = MIME[ext] ?? 'application/octet-stream';
 
       const resolvedTitle = title ?? buildTitle(payee, transactionDate);
@@ -105,9 +77,11 @@ export function registerDocumentTools(server: McpServer): void {
         }
       }
 
+      const buffer = Buffer.from(content, 'base64');
       const blob = new Blob([buffer], { type: mimeType });
+
       const form = new FormData();
-      form.append('document', blob, resolvedFilename);
+      form.append('document', blob, filename);
       form.append('title', resolvedTitle);
       if (created ?? transactionDate) form.append('created', created ?? transactionDate!);
       allTags.forEach(t => form.append('tags', String(t)));
