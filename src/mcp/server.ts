@@ -11,7 +11,6 @@ import { registerQueryTools } from './tools/query';
 import { registerTagTools } from './tools/tags';
 import { registerLookupTools } from './tools/lookup';
 import { registerPayeeRuleTools } from './tools/payee-rules';
-import { registerDocumentTools } from './tools/documents';
 
 export function createMcpServer(): McpServer {
   const server = new McpServer({
@@ -31,7 +30,6 @@ export function createMcpServer(): McpServer {
   registerTagTools(server);
   registerLookupTools(server);
   registerPayeeRuleTools(server);
-  registerDocumentTools(server);
 
   return server;
 }
